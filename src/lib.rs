@@ -10,10 +10,8 @@
 //!
 //! [1]: https://wiki.mozilla.org/Software_Update:MAR
 
-extern crate byteorder;
-
-pub mod read;
 pub mod extract;
+pub mod read;
 
 /// Metadata about an entire MAR file.
 pub struct MarFileInfo {
@@ -65,8 +63,8 @@ fn mar_item_size(name_len: usize) -> usize {
 }
 
 struct ProductInformationBlock {
-    MARChannelID: Vec<u8>,
-    productVersion: Vec<u8>,
+    mar_channel_id: Vec<u8>,
+    product_version: Vec<u8>,
 }
 
 // Product Information Block (PIB) constants:

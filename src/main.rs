@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-extern crate mar;
-
 use std::env::args;
 
 fn main() {
@@ -17,6 +15,6 @@ fn main() {
 
         Some(x) => eprintln!("Unrecognized option {:?}", x),
 
-        _ => eprintln!("Usage: [TODO]")
+        _ => eprintln!("Usage: [TODO]"),
     }
 }

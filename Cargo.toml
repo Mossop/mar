@@ -1,17 +1,18 @@
 [package]
 name = "mar"
-version = "0.1.1"
-authors = ["Matt Brubeck <mbrubeck@limpet.net>"]
+version = "0.2.0"
+authors = ["Matt Brubeck <mbrubeck@limpet.net>", "Dave Townsend <dtownsend@oxymoronical.com>"]
 license = "MPL-2.0"
 description = "Library for reading and writing Mozilla Archive files"
 documentation = "https://docs.rs/mar/"
-repository = "https://github.com/mbrubeck/mar"
+repository = "https://github.com/Mossop/mar"
 readme = "README.md"
 keywords = ["archive", "format", "signature"]
 categories = ["cryptography", "parser-implementations"]
+edition = "2021"
 
 [dependencies]
-byteorder = "1.1"
+byteorder = "^1.4.3"
 
 [[bin]]
 name = "mar"

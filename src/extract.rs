@@ -4,10 +4,11 @@
 
 //! Extracting archives to the filesystem.
 
-use read::read_index;
-use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
+use crate::read::read_index;
 use std::fs::{self, File, OpenOptions};
-#[cfg(unix)] use std::os::unix::fs::OpenOptionsExt;
+use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
 /// Extract all the files from the specified archive to the current directory.
@@ -26,8 +27,10 @@ pub fn extract<P: AsRef<Path>>(path: P) -> io::Result<()> {
         // TODO: Consolidate duplicate parents to make this more efficient?
         // TODO: Prevent directory traversal?
         {
-            let dir = Path::new(&item.name).parent()
-                .ok_or(io::Error::new(ErrorKind::InvalidData, "File name must not be empty"))?;
+            let dir = Path::new(&item.name).parent().ok_or(io::Error::new(
+                ErrorKind::InvalidData,
+                "File name must not be empty",
+            ))?;
             fs::create_dir_all(dir)?;
         }
 
@@ -35,7 +38,8 @@ pub fn extract<P: AsRef<Path>>(path: P) -> io::Result<()> {
         let mut options = OpenOptions::new();
         options.write(true);
         options.create(true);
-        #[cfg(unix)] {
+        #[cfg(unix)]
+        {
             options.mode(item.flags);
         }
         let mut file = options.open(item.name)?;
@@ -43,7 +47,10 @@ pub fn extract<P: AsRef<Path>>(path: P) -> io::Result<()> {
         // Copy the data.
         let bytes_written = io::copy(&mut data, &mut file)?;
         if bytes_written != item.length as u64 {
-            return Err(io::Error::new(ErrorKind::UnexpectedEof, "Unexpected end of file"))
+            return Err(io::Error::new(
+                ErrorKind::UnexpectedEof,
+                "Unexpected end of file",
+            ));
         }
     }
 
