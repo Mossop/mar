@@ -10,11 +10,21 @@
 //!
 //! [1]: https://wiki.mozilla.org/Software_Update:MAR
 
+use std::{
+    fs::File,
+    io::{self, BufReader, Cursor, ErrorKind, Read, Seek, SeekFrom, Take},
+    path::Path,
+};
+
+use byteorder::{BigEndian, ReadBytesExt};
+use read::{get_info, read_next_item};
+
 pub mod extract;
 pub mod read;
 
 /// Metadata about an entire MAR file.
 pub struct MarFileInfo {
+    offset_to_index: u32,
     has_signature_block: bool,
     num_signatures: u32,
     has_additional_blocks: bool,
@@ -23,15 +33,15 @@ pub struct MarFileInfo {
 }
 
 /// An entry in the MAR index.
-struct MarItem {
+pub struct MarItem {
     /// Position of the item within the archive file.
     offset: u32,
     /// Length of data in bytes.
-    length: u32,
+    pub length: u32,
     /// File mode bits.
-    flags: u32,
+    pub flags: u32,
     /// File path.
-    name: String,
+    pub name: String,
 }
 
 /// Round `n` up to the nearest multiple of `incr`.
@@ -70,3 +80,66 @@ struct ProductInformationBlock {
 // Product Information Block (PIB) constants:
 const PIB_MAX_MAR_CHANNEL_ID_SIZE: usize = 63;
 const PIB_MAX_PRODUCT_VERSION_SIZE: usize = 31;
+
+pub struct Mar<R> {
+    info: MarFileInfo,
+    buffer: R,
+}
+
+impl<R> Mar<R> {
+    pub fn from_buffer<T: Read + Seek>(mut buffer: T) -> io::Result<Mar<T>> {
+        let info = get_info(&mut buffer)?;
+
+        Ok(Mar { info, buffer })
+    }
+
+    pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Mar<BufReader<File>>> {
+        let buffer = BufReader::new(File::open(path)?);
+        Self::from_buffer(buffer)
+    }
+}
+
+impl<R> Mar<R>
+where
+    R: Read + Seek,
+{
+    pub fn read<'a>(&'a mut self, item: &MarItem) -> io::Result<Take<&mut R>> {
+        self.buffer.seek(SeekFrom::Start(item.offset as u64))?;
+        Ok(self.buffer.by_ref().take(item.length as u64))
+    }
+
+    pub fn files(&mut self) -> io::Result<Files> {
+        self.buffer
+            .seek(SeekFrom::Start(self.info.offset_to_index as u64))?;
+
+        // Read the index into memory.
+        let size_of_index = self.buffer.read_u32::<BigEndian>()?;
+        let mut index = vec![0; size_of_index as usize];
+        self.buffer.read_exact(&mut index)?;
+
+        Ok(Files {
+            index: Cursor::new(index),
+        })
+    }
+}
+
+pub struct Files {
+    index: Cursor<Vec<u8>>,
+}
+
+impl Iterator for Files {
+    type Item = io::Result<MarItem>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match read_next_item(&mut self.index) {
+            Ok(item) => Some(Ok(item)),
+            Err(e) => {
+                if e.kind() == ErrorKind::UnexpectedEof {
+                    None
+                } else {
+                    Some(Err(e))
+                }
+            }
+        }
+    }
+}

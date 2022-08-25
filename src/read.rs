@@ -21,6 +21,9 @@ pub fn get_info<R>(mut archive: R) -> io::Result<MarFileInfo>
 where
     R: Read + Seek,
 {
+    // Ensure we're at the start of the stream.
+    archive.rewind()?;
+
     // Read the header.
     let mut id = [0; MAR_ID_SIZE];
     archive.read_exact(&mut id)?;
@@ -66,6 +69,7 @@ where
     };
 
     Ok(MarFileInfo {
+        offset_to_index,
         has_signature_block,
         num_signatures,
         offset_additional_blocks,
@@ -81,6 +85,9 @@ pub fn read_index<R>(mut archive: R) -> io::Result<Vec<MarItem>>
 where
     R: Read + Seek,
 {
+    // Ensure we're at the start of the stream.
+    archive.rewind()?;
+
     // Verify the magic bytes.
     let mut id = [0; MAR_ID_SIZE];
     archive.read_exact(&mut id)?;
@@ -110,7 +117,7 @@ where
 }
 
 /// Read a single entry from the index.
-fn read_next_item<R: BufRead>(mut index: R) -> io::Result<MarItem> {
+pub(crate) fn read_next_item<R: BufRead>(mut index: R) -> io::Result<MarItem> {
     let offset = index.read_u32::<BigEndian>()?;
     let length = index.read_u32::<BigEndian>()?;
     let flags = index.read_u32::<BigEndian>()?;
