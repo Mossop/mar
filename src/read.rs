@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
- //! Reading MAR files.
+//! Reading MAR files.
 
-use byteorder::{BigEndian, ReadBytesExt};
 use super::{MarFileInfo, MarItem};
+use byteorder::{BigEndian, ReadBytesExt};
 use std::io::{self, BufRead, ErrorKind, Read, Seek, SeekFrom};
 use std::u32;
 
@@ -18,14 +18,17 @@ const SIGNATURE_BLOCK_OFFSET: u64 = 16;
 
 /// Read metadata from a MAR file.
 pub fn get_info<R>(mut archive: R) -> io::Result<MarFileInfo>
-    where R: Read + Seek
+where
+    R: Read + Seek,
 {
     // Read the header.
     let mut id = [0; MAR_ID_SIZE];
     archive.read_exact(&mut id)?;
     if id != *MAR_ID {
-        return Err(io::Error::new( ErrorKind::InvalidData,
-            "Not a MAR file (invalid bytes at start of file)."))
+        return Err(io::Error::new(
+            ErrorKind::InvalidData,
+            "Not a MAR file (invalid bytes at start of file).",
+        ));
     }
     let offset_to_index = archive.read_u32::<BigEndian>()?;
     let num_signatures = archive.read_u32::<BigEndian>()?;
@@ -49,7 +52,10 @@ pub fn get_info<R>(mut archive: R) -> io::Result<MarFileInfo>
     // Check for additional blocks.
     let pos = archive.seek(SeekFrom::Current(0))?;
     if pos > u32::MAX as u64 {
-        return Err(io::Error::new(ErrorKind::InvalidData, "Signature block size overflow"))
+        return Err(io::Error::new(
+            ErrorKind::InvalidData,
+            "Signature block size overflow",
+        ));
     }
     let offset_additional_blocks = pos as u32;
     let has_additional_blocks = offset_additional_blocks == offset_to_content;
@@ -64,7 +70,7 @@ pub fn get_info<R>(mut archive: R) -> io::Result<MarFileInfo>
         num_signatures,
         offset_additional_blocks,
         has_additional_blocks,
-        num_additional_blocks
+        num_additional_blocks,
     })
 }
 
@@ -72,14 +78,17 @@ pub fn get_info<R>(mut archive: R) -> io::Result<MarFileInfo>
 ///
 /// TODO: Return an iterator?
 pub(crate) fn read_index<R>(mut archive: R) -> io::Result<Vec<MarItem>>
-    where R: Read + Seek
+where
+    R: Read + Seek,
 {
     // Verify the magic bytes.
     let mut id = [0; MAR_ID_SIZE];
     archive.read_exact(&mut id)?;
     if id != *MAR_ID {
-        return Err(io::Error::new( ErrorKind::InvalidData,
-            "Not a MAR file (invalid bytes at start of file)."))
+        return Err(io::Error::new(
+            ErrorKind::InvalidData,
+            "Not a MAR file (invalid bytes at start of file).",
+        ));
     }
 
     // Seek to the index.
@@ -105,13 +114,20 @@ fn read_next_item<R: BufRead>(mut index: R) -> io::Result<MarItem> {
     let offset = index.read_u32::<BigEndian>()?;
     let length = index.read_u32::<BigEndian>()?;
     let flags = index.read_u32::<BigEndian>()?;
-    
+
     let mut name = Vec::new();
     index.read_until(0, &mut name)?;
     name.pop(); // Remove the trailing NUL.
 
-    let name = String::from_utf8(name)
-        .or(Err(io::Error::new(ErrorKind::InvalidData, "Filename is not UTF-8")))?;
-    
-    Ok(MarItem { offset, length, flags, name })
+    let name = String::from_utf8(name).or(Err(io::Error::new(
+        ErrorKind::InvalidData,
+        "Filename is not UTF-8",
+    )))?;
+
+    Ok(MarItem {
+        offset,
+        length,
+        flags,
+        name,
+    })
 }
