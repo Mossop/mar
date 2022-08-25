@@ -77,7 +77,7 @@ where
 /// Read the index from a MAR file.
 ///
 /// TODO: Return an iterator?
-pub(crate) fn read_index<R>(mut archive: R) -> io::Result<Vec<MarItem>>
+pub fn read_index<R>(mut archive: R) -> io::Result<Vec<MarItem>>
 where
     R: Read + Seek,
 {
@@ -119,10 +119,8 @@ fn read_next_item<R: BufRead>(mut index: R) -> io::Result<MarItem> {
     index.read_until(0, &mut name)?;
     name.pop(); // Remove the trailing NUL.
 
-    let name = String::from_utf8(name).or(Err(io::Error::new(
-        ErrorKind::InvalidData,
-        "Filename is not UTF-8",
-    )))?;
+    let name = String::from_utf8(name)
+        .map_err(|_| io::Error::new(ErrorKind::InvalidData, "Filename is not UTF-8"))?;
 
     Ok(MarItem {
         offset,

@@ -27,10 +27,9 @@ pub fn extract<P: AsRef<Path>>(path: P) -> io::Result<()> {
         // TODO: Consolidate duplicate parents to make this more efficient?
         // TODO: Prevent directory traversal?
         {
-            let dir = Path::new(&item.name).parent().ok_or(io::Error::new(
-                ErrorKind::InvalidData,
-                "File name must not be empty",
-            ))?;
+            let dir = Path::new(&item.name).parent().ok_or_else(|| {
+                io::Error::new(ErrorKind::InvalidData, "File name must not be empty")
+            })?;
             fs::create_dir_all(dir)?;
         }
 
