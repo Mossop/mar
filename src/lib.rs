@@ -10,9 +10,11 @@
 //!
 //! [1]: https://wiki.mozilla.org/Software_Update:MAR
 
+#![warn(missing_docs)]
+
 use std::{
     fs::File,
-    io::{self, BufReader, Cursor, ErrorKind, Read, Seek, SeekFrom, Take},
+    io::{self, BufReader, Cursor, ErrorKind, Read, Seek, SeekFrom},
     path::Path,
 };
 
@@ -27,10 +29,15 @@ pub mod read;
 /// Metadata about an entire MAR file.
 pub struct MarFileInfo {
     offset_to_index: u32,
+    #[allow(dead_code)]
     has_signature_block: bool,
+    #[allow(dead_code)]
     num_signatures: u32,
+    #[allow(dead_code)]
     has_additional_blocks: bool,
+    #[allow(dead_code)]
     offset_additional_blocks: u32,
+    #[allow(dead_code)]
     num_additional_blocks: u32,
 }
 
@@ -46,43 +53,7 @@ pub struct MarItem {
     pub name: String,
 }
 
-/// Round `n` up to the nearest multiple of `incr`.
-#[inline]
-fn round_up(n: usize, incr: usize) -> usize {
-    n / (incr + 1) * incr
-}
-
-/// Make sure the file is less than 500MB.  We do this to protect against invalid MAR files.
-const MAX_SIZE_OF_MAR_FILE: u64 = 500 * 1024 * 1024;
-
-/// The maximum size of any signature supported by current and future implementations of the
-/// signmar program.
-const MAX_SIGNATURE_LENGTH: usize = 2048;
-
-/// Each additional block has a unique ID.  The product information block has an ID of 1.
-const PRODUCT_INFO_BLOCK_ID: u32 = 1;
-
-/// An index entry contains three 4-byte fields, a name, and a 1-byte terminator.
-///
-/// * 4 bytes : OffsetToContent - Offset in bytes relative to start of the MAR file
-/// * 4 bytes : ContentSize - Size in bytes of the content
-/// * 4 bytes : Flags - File permission bits (in standard unix-style format).
-/// * M bytes : FileName - File name (byte array)
-/// * 1 byte  : null terminator
-#[inline]
-fn mar_item_size(name_len: usize) -> usize {
-    3 * 4 + name_len + 1
-}
-
-struct ProductInformationBlock {
-    mar_channel_id: Vec<u8>,
-    product_version: Vec<u8>,
-}
-
-// Product Information Block (PIB) constants:
-const PIB_MAX_MAR_CHANNEL_ID_SIZE: usize = 63;
-const PIB_MAX_PRODUCT_VERSION_SIZE: usize = 31;
-
+/// A high level interface to read the contents of a mar file.
 pub struct Mar<R> {
     info: MarFileInfo,
     buffer: R,
@@ -92,6 +63,7 @@ impl<R> Mar<R>
 where
     R: Read + Seek,
 {
+    /// Creates a Mar instance from any seekable readable.
     pub fn from_buffer(mut buffer: R) -> io::Result<Mar<R>> {
         let info = get_info(&mut buffer)?;
 
@@ -100,6 +72,7 @@ where
 }
 
 impl Mar<BufReader<File>> {
+    /// Creates a Mar instance from a local file path.
     pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Mar<BufReader<File>>> {
         let buffer = BufReader::new(File::open(path)?);
         Self::from_buffer(buffer)
@@ -110,11 +83,13 @@ impl<R> Mar<R>
 where
     R: Read + Seek,
 {
+    /// Reads the contents of a file from this mar.
     pub fn read<'a>(&'a mut self, item: &MarItem) -> io::Result<CompressedRead<'a, R>> {
         self.buffer.seek(SeekFrom::Start(item.offset as u64))?;
         CompressedRead::new(&mut self.buffer, item.length as u64)
     }
 
+    /// Returns an Iterator to the list of files in this mar.
     pub fn files(&mut self) -> io::Result<Files> {
         self.buffer
             .seek(SeekFrom::Start(self.info.offset_to_index as u64))?;
@@ -130,6 +105,7 @@ where
     }
 }
 
+/// An iterator over the files in a mar.
 pub struct Files {
     index: Cursor<Vec<u8>>,
 }

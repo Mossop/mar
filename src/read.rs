@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-//! Reading MAR files.
+//! Low level utilities for reading MAR files.
 
 use super::{MarFileInfo, MarItem};
 use byteorder::{BigEndian, ReadBytesExt};
