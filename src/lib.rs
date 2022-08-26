@@ -17,8 +17,10 @@ use std::{
 };
 
 use byteorder::{BigEndian, ReadBytesExt};
+use compression::CompressedRead;
 use read::{get_info, read_next_item};
 
+pub mod compression;
 pub mod extract;
 pub mod read;
 
@@ -86,13 +88,18 @@ pub struct Mar<R> {
     buffer: R,
 }
 
-impl<R> Mar<R> {
-    pub fn from_buffer<T: Read + Seek>(mut buffer: T) -> io::Result<Mar<T>> {
+impl<R> Mar<R>
+where
+    R: Read + Seek,
+{
+    pub fn from_buffer(mut buffer: R) -> io::Result<Mar<R>> {
         let info = get_info(&mut buffer)?;
 
         Ok(Mar { info, buffer })
     }
+}
 
+impl Mar<BufReader<File>> {
     pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Mar<BufReader<File>>> {
         let buffer = BufReader::new(File::open(path)?);
         Self::from_buffer(buffer)
@@ -103,9 +110,9 @@ impl<R> Mar<R>
 where
     R: Read + Seek,
 {
-    pub fn read<'a>(&'a mut self, item: &MarItem) -> io::Result<Take<&mut R>> {
+    pub fn read<'a>(&'a mut self, item: &MarItem) -> io::Result<CompressedRead<'a, R>> {
         self.buffer.seek(SeekFrom::Start(item.offset as u64))?;
-        Ok(self.buffer.by_ref().take(item.length as u64))
+        CompressedRead::new(&mut self.buffer, item.length as u64)
     }
 
     pub fn files(&mut self) -> io::Result<Files> {
