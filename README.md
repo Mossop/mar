@@ -1,13 +1,15 @@
+[![Crates.io](https://img.shields.io/crates/v/mar)](https://crates.io/crates/mar)
+[![docs.rs](https://img.shields.io/docsrs/mar)](https://docs.rs/mar)
+[![License](https://img.shields.io/github/license/Mossop/mar)](https://www.mozilla.org/en-US/MPL/)
+
 This is a Rust implementation of the [Mozilla Archive (MAR) file format][1]
 used to deliver automatic updates to Firefox.  It includes both a library and
 a command-line tool for reading and writing MAR files.
 
-* [Documentation](https://docs.rs/mar/)
-* [crates.io](https://crates.io/crates/mar)
-
 Currently supports:
 
-* Extracting MAR archives
+* Reading the list of files in a MAR archive
+* Extracting file content from a MAR archive
 
 Not yet supported:
 
